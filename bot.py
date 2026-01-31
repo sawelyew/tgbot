@@ -39,15 +39,15 @@ def get_start_keyboard():
     )
     return keyboard
 
-@dp.message(Command('testik'))
-async def testik(message: Message):
-    buttons = await get_buttons()
-    inline_keyboard_buttons = []
-    for btn in buttons:
-        print(btn.button_text, btn.callback_data, btn.button_order)
-        inline_keyboard_buttons.append([InlineKeyboardButton(text=btn.button_text, callback_data=btn.callback_data)])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_buttons)
-    await message.answer(text="paparapapam", reply_markup=keyboard)
+# @dp.message(Command('testik'))
+# async def testik(message: Message):
+#     buttons = await get_buttons()
+#     inline_keyboard_buttons = []
+#     for btn in buttons:
+#         print(btn.button_text, btn.callback_data, btn.button_order)
+#         inline_keyboard_buttons.append([InlineKeyboardButton(text=btn.button_text, callback_data=btn.callback_data)])
+#     keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_buttons)
+#     await message.answer(text="paparapapam", reply_markup=keyboard)
 
 @dp.message(CommandStart())
 async def start(message: Message):
