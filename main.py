@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sys
-import datetime
 import os
 from dotenv import load_dotenv
 
@@ -9,14 +8,15 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, FSInputFile
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from database import init_database, get_welcome_text, change_welcome_text, get_contacts, change_contacts, get_buttons, update_settings, get_settings
-# load_dotenv()
-# API_TOKEN = os.getenv('API_TOKEN')
-# ADMIN_IDS = os.getenv('ADMIN_IDS')
-from keys import API_TOKEN, ADMIN_IDS, CHAT_ID
+from database import init_database, update_settings, get_settings, get_buttons
+load_dotenv()
+API_TOKEN = os.getenv('API_TOKEN')
+CHAT_ID = os.getenv('CHAT_ID')
+admin_ids_str = os.getenv("ADMIN_IDS", "")
+ADMIN_IDS = [int(id.strip()) for id in admin_ids_str.split(",") if id.strip()]
 
 dp = Dispatcher()
 class OrderForm(StatesGroup):
@@ -39,15 +39,6 @@ def get_start_keyboard():
     )
     return keyboard
 
-# @dp.message(Command('testik'))
-# async def testik(message: Message):
-#     buttons = await get_buttons()
-#     inline_keyboard_buttons = []
-#     for btn in buttons:
-#         print(btn.button_text, btn.callback_data, btn.button_order)
-#         inline_keyboard_buttons.append([InlineKeyboardButton(text=btn.button_text, callback_data=btn.callback_data)])
-#     keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard_buttons)
-#     await message.answer(text="paparapapam", reply_markup=keyboard)
 
 @dp.message(CommandStart())
 async def start(message: Message):
@@ -60,7 +51,6 @@ async def start(message: Message):
         await message.answer_photo(caption=welcome_text, reply_markup=keyboard, photo=photo_id)
     else:
         await message.answer(text=welcome_text, reply_markup=keyboard)
-
 
 
 @dp.callback_query(F.data == "prices")
@@ -127,17 +117,17 @@ async def process_contact(message: Message, state: FSMContext):
     await state.clear()
 
 
-
 # Admin Panel
 @dp.message(Command("panel"), F.from_user.id.in_(ADMIN_IDS))
 async def admin_panel(message: Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text='Приветствие', callback_data='admin_panel_welcome_text')],
-            [InlineKeyboardButton(text='Меню кнопок', callback_data='admin_panel_buttons_menu')],
+            [InlineKeyboardButton(text='Текущие кнопки', callback_data='admin_panel_buttons_menu')],
         ]
     )
     await message.answer(text="Вы вошли в админ-панель. Выберите что вас интересует: ", reply_markup=keyboard)
+
 
 @dp.callback_query(F.data=='admin_panel_welcome_text', F.from_user.id.in_(ADMIN_IDS))
 async def admin_panel_welcoming_text(callback: CallbackQuery):
@@ -162,7 +152,7 @@ async def admin_panel_change_welcome_text(callback: CallbackQuery, state: FSMCon
 @dp.message(WelcomeTextForm.text, F.from_user.id.in_(ADMIN_IDS))
 async def admin_panel_process_welcome_text(message: Message, state: FSMContext):
     welcome_text = message.text
-    await change_welcome_text(welcome_text)
+    await update_settings("welcome_text", welcome_text)
     await message.answer(f"Приветствие было успешно заменено на: '{welcome_text}' ✅")
     await state.clear()
 
@@ -197,7 +187,6 @@ async def admin_panel_welcome_text_preview(callback: CallbackQuery):
     await callback.answer()
     welcome_text = await get_settings("welcome_text")
     photo_id = await get_settings("welcome_photo_id")
-    keyboard = get_start_keyboard()
     if photo_id:
         await callback.message.answer_photo(photo=photo_id, caption=welcome_text)
     else:
@@ -205,23 +194,15 @@ async def admin_panel_welcome_text_preview(callback: CallbackQuery):
             welcome_text = "Добро пожаловать, выберите интересующее вас: "
         await callback.message.answer(text=welcome_text)
 
-
 @dp.callback_query(F.data == 'admin_panel_buttons_menu', F.from_user.id.in_(ADMIN_IDS))
 async def admin_panel_buttons_menu(callback:CallbackQuery):
     await callback.answer()
-    message_text = "Текущие кнопки в БД: \n"
+    message_text = "Текущие кнопки: \n"
     buttons = await get_buttons()
     for btn in buttons:
         message_text += f"{btn.button_order}. {btn.button_text}\n"
+    await callback.message.answer(text=message_text)
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text='Добавить кнопку', callback_data='admin_panel_add_button')],
-            [InlineKeyboardButton(text='Удалить кнопку', callback_data='admin_panel_delete_button')],
-            [InlineKeyboardButton(text='Изменить порядок', callback_data='admin_panel_change_button_order')],
-        ]
-    )
-    await callback.message.answer(text=message_text, reply_markup=keyboard)
 
 @dp.message(Command("test"), F.from_user.id.in_(ADMIN_IDS))
 async def test_command(message: Message):
@@ -233,13 +214,6 @@ async def test_command(message: Message):
         await message.answer_photo(photo=photo_id, caption=welcome_text, reply_markup=get_start_keyboard())
     else:
         await message.answer(text=welcome_text, reply_markup=get_start_keyboard())
-
-
-
-
-
-
-
 
 
 async def main() -> None:
