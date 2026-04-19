@@ -91,6 +91,11 @@ async def admin_panel_buttons_menu(callback: CallbackQuery):
     await callback.answer()
     message_text = "Текущие кнопки: \n"
     buttons = await get_buttons()
-    for btn in buttons:
-        message_text += f"{btn.button_order}. {btn.button_text}\n"
+    if buttons:
+        for btn in buttons:
+            message_text += f"{btn.button_order}. {btn.button_text}\n"
+    else:
+        buttons = ['Узнать цены', 'Заказать', 'Контакты', 'FAQ']
+        for i in range(len(buttons)):
+            message_text += f"{i+1}. {buttons[i]}\n"
     await callback.message.answer(text=message_text)
