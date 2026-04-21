@@ -50,5 +50,5 @@ pip install -r requirements.txt
 ```
 #### 3. Запуск бота
 ``` 
-python main.py
+python bot.py
 ```
